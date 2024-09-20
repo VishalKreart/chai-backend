@@ -1,7 +1,5 @@
 import mongoose, { Schema } from "mongoose";
 import jwt from "jsonwebtoken";
-// import pkg from 'jsonwebtoken';
-// const { jwt } = pkg;
 import bcrypt from "bcrypt";
 
 const userSchema = new Schema({
@@ -45,6 +43,10 @@ const userSchema = new Schema({
     },
     refreshToken: {
         type: String
+    },
+    age: {
+        type: Number,
+        required: true
     }
 }, { timestamps: true });
 

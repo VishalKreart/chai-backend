@@ -39,10 +39,10 @@ const registerUser = asyncHandler(async (req, res) => {
     */
 
     //1)
-    const { username, fullName, email, password } = req.body;
+    const { username, fullName, email, password, age } = req.body;
     // console.log(`username: ${username} and email: ${email}`);
     //2)
-    if ([username, fullName, email, password].some((field) => field?.trim() === "")) {
+    if ([username, fullName, email, password, age].some((field) => field?.trim() === "")) {
         throw new ApiError(400, "All fields are required");
     }
     //3)
@@ -79,7 +79,8 @@ const registerUser = asyncHandler(async (req, res) => {
         coverImage: coverImage?.url || "",
         email,
         password,
-        username: username.toLowerCase()
+        username: username.toLowerCase(),
+        age
     })
     const createdUser = await User.findById(user._id).select(
         "-password -refreshToken"
@@ -409,6 +410,18 @@ const getWatchHistory = asyncHandler(async (req, res) => {
         )
 })
 
+const getUsersAgeAbove18 = asyncHandler(async (req, res) => {
+
+    const users = await User.find({
+        age: { $gte: 18 }
+    }, 'fullName email age')
+    return res.status(200)
+        .json(
+            new ApiResponse(200, users, "users above 18 years")
+        )
+
+})
+
 export {
     registerUser,
     loginUser,
@@ -420,5 +433,6 @@ export {
     updateUserAvatar,
     updateUserCoverImage,
     getUserChannelProfile,
-    getWatchHistory
+    getWatchHistory,
+    getUsersAgeAbove18
 }
