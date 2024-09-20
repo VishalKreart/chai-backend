@@ -95,7 +95,6 @@ const togglePublishStatus = asyncHandler(async (req, res) => {
     //TODO: toggle publish status
     const { videoId } = req.params;
 
-    const video = 
 
 })
 
