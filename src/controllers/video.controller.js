@@ -9,15 +9,25 @@ import { uploadFileOnCloudinary } from "../utils/cloudinary.js"
 const getAllVideos = asyncHandler(async (req, res) => {
 
     //TODO: get all videos based on query, sort, pagination
-    const { page = 1, limit = 10, query, sortBy, sortType, userId } = req.query;
+    // const { page = 1,
+    //     limit = 10,
+    //     query = "",
+    //     sortBy = "createdAt",
+    //     sortType = "desc",
+    //     userId = "" } = req.query;
+
+    const videos = await Video.find();
+
+    return res.status(200).json(new ApiResponse(200, videos, "Videos found successfully"));
 
 })
 
 const publishVideo = asyncHandler(async (req, res) => {
     // TODO: get video, upload to cloudinary, create video
     const { title, description } = req.body;
-    const videoFileLocalPath = req.files?.video[0]?.path;
-    const thumbnailFileLocalPath = req.files?.thumbnail[0]?.path;
+
+    const videoFileLocalPath = req.files?.videoFile[0]?.path;
+    const thumbnailFileLocalPath = req.files?.thumbNail[0]?.path;
 
     if (!videoFileLocalPath || !thumbnailFileLocalPath) {
         throw new ApiError(400, "Video or thumbnail files not found")
@@ -30,17 +40,19 @@ const publishVideo = asyncHandler(async (req, res) => {
         throw new ApiError(500, "Something went wrong while uploading video or thumbnail");
     }
     console.log(video);
-    const newVideo = await Video.create({
+    const createdNewVideo = await Video.create({
         name: title,
         description,
         videoFile: video.url,
         thumbNail: thumbnail.url,
-        duration: video.duration
+        duration: video?.duration,
+        isPublished: true,
+        owner: new mongoose.Types.ObjectId(req.user?._id)
     })
 
-    const createdNewVideo = await Video.findById(newVideo._id);
+    // const createdNewVideo = await Video.findById(newVideo._id);
     if (!createdNewVideo) {
-        throw new ApiError(500, "Something went wrong while creating video");
+        throw new ApiError(500, "Something went wrong while uploading video");
     }
 
     return res.status(201)
@@ -83,18 +95,46 @@ const updateVideo = asyncHandler(async (req, res) => {
         }
     }, { new: true });
 
+    if (!updatedVideo) {
+        throw new ApiError(404, "Video not found");
+    }
+
     return res.status(200).json(new ApiResponse(200, updatedVideo, "Video info updated successfully"));
 })
 
 const deleteVideo = asyncHandler(async (req, res) => {
     //TODO: delete video
     const { videoId } = req.params;
+
+    const video = await Video.findByIdAndDelete(videoId)
+
+    if (!video) {
+        throw new ApiError(404, "Video not found")
+    }
+
+    return res.status(200).json(new ApiResponse(200, video, "Video deleted successfully"));
+
 })
 
 const togglePublishStatus = asyncHandler(async (req, res) => {
     //TODO: toggle publish status
     const { videoId } = req.params;
+    const video = await Video.findById(videoId);
+    if (!video) {
+        throw new ApiError(404, "Video not found")
+    }
 
+    const updatedVideo = await Video.findByIdAndUpdate(videoId, {
+        $set: {
+            isPublished: !video.isPublished
+        }
+    }, { new: true }).select(
+        "-duration -views -owner -videoFile -thumbNail"
+    );
+
+    return res.status(200).json(new ApiResponse(200,
+        updatedVideo,
+        "Video published status updated successfully"));
 
 })
 
