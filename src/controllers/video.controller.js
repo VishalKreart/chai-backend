@@ -9,14 +9,65 @@ import { uploadFileOnCloudinary } from "../utils/cloudinary.js"
 const getAllVideos = asyncHandler(async (req, res) => {
 
     //TODO: get all videos based on query, sort, pagination
-    // const { page = 1,
-    //     limit = 10,
-    //     query = "",
-    //     sortBy = "createdAt",
-    //     sortType = "desc",
-    //     userId = "" } = req.query;
+    const { page = 1,
+        limit = 10,
+        query = "",
+        sortBy = "createdAt",
+        sortType = "desc",
+        userId = "" } = req.query;
 
-    const videos = await Video.find();
+    const totalVideos = await Video.countDocuments({});
+    const totalPages = Math.ceil(totalVideos / limit);
+    const startPage = (page - 1) * limit;
+    // console.log(totalVideos, totalPages, startPage);
+
+    const videos = await Video.aggregate([
+
+        {
+            $lookup: {
+                from: "users",
+                localField: "owner",
+                foreignField: "_id",
+                as: "owner"
+            }
+        },
+        {
+            $addFields: {
+                owner: {
+                    $arrayElemAt: ["$owner", 0]
+                }
+            }
+        },
+        {
+            $skip: startPage,
+        },
+        {
+            $limit: parseInt(limit) //limit
+        },
+        {
+            $sort: {
+                createdAt: -1
+            }
+        },
+        {
+            $project: {
+                _id: 1,
+                name: 1,
+                description: 1,
+                videoFile: 1,
+                thumbNail: 1,
+                duration: 1,
+                isPublished: 1,
+                views: 1,
+                owner: {
+                    _id: 1,
+                    username: 1,
+                    fullName: 1
+                }
+            }
+        }
+    ])
+
 
     return res.status(200).json(new ApiResponse(200, videos, "Videos found successfully"));
 

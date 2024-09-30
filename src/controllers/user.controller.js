@@ -290,7 +290,29 @@ const updateUserCoverImage = asyncHandler(async (req, res) => {
             new ApiResponse(200, user, "Cover image updated succsessfully")
         )
 })
-
+// [
+//     {
+//       $unwind: {
+//         path: "$tags"
+//       }
+//     },
+//       {
+//           $group: {
+//             _id: "$_id",
+//           numberOfTags:{
+//             $sum:1
+//           }
+//           }  
+//       },
+//     {
+//       $group: {
+//         _id: null,
+//         averageNumberOfTags:{
+//           $avg:"$numberOfTags"
+//         }
+//       }
+//     }
+//   ]
 const getUserChannelProfile = asyncHandler(async (req, res) => {
     const { username } = req.params;
     if (!username?.trim()) {
