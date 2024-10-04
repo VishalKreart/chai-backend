@@ -5,7 +5,7 @@ import { ApiResponse } from "../utils/ApiResponse.js"
 import { asyncHandler } from "../utils/asyncHandler.js"
 
 const getVideoComments = asyncHandler(async (req, res) => {
-    //get all comments form a video
+    //get all comments from a video
     const { videoId } = req.params;
     const { page = 1, limit = 10 } = req.query;
 
@@ -17,6 +17,7 @@ const getVideoComments = asyncHandler(async (req, res) => {
         page: parseInt(page),
         limit: parseInt(limit)
     }
+    const startPage = (options.page - 1) * options.limit;
 
     const commentsOnVideo = await Comment.aggregate([
         {
@@ -25,12 +26,27 @@ const getVideoComments = asyncHandler(async (req, res) => {
             }
         },
         {
-            lookup: {
+            $sort: {
+                createdAt: -1
+            }
+        },
+        {
+            $lookup: {
                 from: "users",
                 localField: "owner",
                 foreignField: "_id",
-                as: "owner"
-            }
+                as: "owner",
+                pipeline: [
+                    {
+                        $project: {
+                            fullName: 1,
+                            username: 1,
+                            avatar: 1,
+                            _id: 1,
+                        },
+                    },
+                ],
+            },
         },
         {
             $addFields: {
@@ -40,14 +56,16 @@ const getVideoComments = asyncHandler(async (req, res) => {
             }
         },
         {
+            $skip: startPage,
+        },
+        {
+            $limit: parseInt(options.limit) //limit
+        },
+        {
             $project: {
-                _id: 1,
                 content: 1,
-                owner: {
-                    _id: 1,
-                    username: 1,
-                    avatar: 1
-                }
+                owner: 1,
+                createdAt: 1
             }
         }
     ])
