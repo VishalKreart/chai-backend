@@ -53,25 +53,64 @@ const toggleTweetLike = asyncHandler(async (req, res) => {
 
 const getLikedVideos = asyncHandler(async (req, res) => {
 
-    // const likedVideo = await Like.aggregate([
-    //     {
-    //         $match: {
-    //             video: { $ne: null },
-    //             likedBy: new mongoose.Types.ObjectId(req.user?._id)
-    //         }
-    //     },
-    //     {
-    //         $lookup: {
-    //             from: "videos",
-    //             localField: "video",
-    //             foreignField: "_id",
-    //             as: "video"
-    //         }
-    //     },
-    //     {
-    //         $unwind: "$video"
-    //     },
-    // ])
+    const likedVideo = await Like.aggregate([
+        {
+            $match: {
+                video: { $ne: null },
+                likedBy: new mongoose.Types.ObjectId(req.user?._id)
+            }
+        },
+        {
+            $lookup: {
+                from: "videos",
+                localField: "video",
+                foreignField: "_id",
+                as: "video",
+                pipeline: [
+                    {
+                        $lookup: {
+                            from: "users",
+                            localField: "owner",
+                            foreignField: "_id",
+                            as: "owner",
+                            pipeline: [
+                                {
+                                    $project: {
+                                        fullName: 1,
+                                        username: 1,
+                                        avatar: 1,
+                                    },
+                                },
+                            ]
+                        }
+                    },
+                    {
+                        $unwind: "$owner"
+                    }
+                ]
+            }
+        },
+        {
+            $unwind: "$video"
+        },
+        {
+            $match: {
+                "video.isPublished": true
+            }
+        },
+        {
+            $group: {
+                _id: "likedBy",
+                videos: { $push: "$video" }
+            }
+        }
+    ])
+    // console.log(likedVideo);
+    const videos = likedVideo[0]?.videos || [];
+    return res
+        .status(200)
+        .json(new ApiResponse(200, videos, "Videos sent successfully"));
+
 })
 
 export {
