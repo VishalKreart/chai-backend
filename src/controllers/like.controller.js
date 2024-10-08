@@ -48,7 +48,7 @@ const toggleTweetLike = asyncHandler(async (req, res) => {
             likedBy: new mongoose.Types.ObjectId(req.user?._id)
         })
     }
-
+    return res.status(200).json(new ApiResponse(200, null, "Like on tweet toggled successfully"));
 })
 
 const getLikedVideos = asyncHandler(async (req, res) => {
