@@ -31,47 +31,71 @@ const getUserTweets = asyncHandler(async (req, res) => {
         throw new ApiError(400, "Invalid user id");
     }
 
-    const tweets = await Tweet.aggregate([
-        {
-            $match: {
-                owner: new mongoose.Types.ObjectId(userId)
-            }
-        },
-        {
-            $sort: {
-                createdAt: -1
-            }
-        },
-        {
-            $lookup: {
-                from: "users",
-                localField: "owner",
-                foreignField: "_id",
-                as: "owner",
-                pipeline: [
-                    {
-                        $project: {
-                            fullName: 1,
-                            username: 1,
-                            avatar: 1
+    const tweets = await Tweet.aggregate(
+        [
+            {
+                $match: {
+                    owner: new mongoose.Types.ObjectId(userId)
+                }
+            },
+            {
+                $sort: {
+                    createdAt: -1
+                }
+            },
+            {
+                $lookup: {
+                    from: "likes",
+                    localField: "_id",
+                    foreignField: "tweet",
+                    as: "likes"
+                }
+            },
+            {
+                $addFields: {
+                    totalLikes: { $size: "$likes" }
+                }
+            },
+            {
+                $lookup: {
+                    from: "users",
+                    localField: "owner",
+                    foreignField: "_id",
+                    as: "owner",
+                    pipeline: [
+                        {
+                            $project: {
+                                username: 1,
+                                avatar: 1,
+                                fullName: 1
+                            }
+                        }
+                    ]
+                }
+            },
+            {
+                $unwind: "$owner"
+            },
+            {
+                $project: {
+                    content: 1,
+                    totalLikes: 1,
+                    owner: 1,
+                    createdAt: 1,
+                    updatedAt: 1,
+                    isLiked: {
+                        $cond: {
+                            if: {
+                                $in: [req.user?._id, "$likes"],
+                            },
+                            then: true,
+                            else: false,
                         },
-                    }
-                ]
+                    },
+                }
             }
-        },
-        {
-            $unwind: "$owner"
-        },
-        {
-            $project: {
-                content: 1,
-                owner: 1,
-                createdAt: 1,
-                updatedAt: 1
-            }
-        }
-
-    ])
+        ]
+    )
 
     if (!tweets) {
         throw new ApiError(500, "Something went wrong while getting tweets");
